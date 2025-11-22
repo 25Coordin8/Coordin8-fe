@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Projects } from '../utils/projects';
 import { Cards } from '../utils/cards';
 import { Storage } from '../utils/storage';
-import { getUser, createOrUpdateUser } from '../utils/api';
+import { getUser, createOrUpdateUser, getTotalFocusTime } from '../utils/api';
 import Logo from '../components/Logo';
 import backIcon from '../assets/back.png';
 import cr01 from '../assets/cr01.png';
@@ -87,13 +87,38 @@ function MyPage() {
         loadData();
     };
 
-    const loadData = () => {
+    const loadData = async () => {
         const allProjects = Projects.getAll();
         const allCards = Cards.getAll();
         const totalMembers = allProjects.reduce((sum, p) => sum + (p.members?.length || 0), 0);
-        const focusTime = Storage.get('totalFocusTime') || 0;
-        const hours = Math.floor(focusTime / 3600);
-        const minutes = Math.floor((focusTime % 3600) / 60);
+        
+        // 백엔드에서 총 집중 시간 조회
+        const userId = Storage.get('userId');
+        let totalSeconds = 0;
+        
+        if (userId) {
+            try {
+                const result = await getTotalFocusTime(userId);
+                if (result.success) {
+                    totalSeconds = result.totalSeconds || 0;
+                    console.log('백엔드에서 총 집중 시간 조회:', totalSeconds, '초');
+                } else {
+                    console.warn('백엔드에서 총 집중 시간 조회 실패:', result.error);
+                    // 백엔드 조회 실패 시 기본값 0 사용
+                    totalSeconds = 0;
+                }
+            } catch (error) {
+                console.error('총 집중 시간 조회 중 오류:', error);
+                // 에러 발생 시 기본값 0 사용
+                totalSeconds = 0;
+            }
+        } else {
+            // userId가 없으면 기본값 0 사용
+            totalSeconds = 0;
+        }
+        
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
 
         setStats({
             teams: allProjects.length,
@@ -177,7 +202,7 @@ function MyPage() {
                     src={backIcon} 
                     alt="뒤로가기" 
                     className="back-arrow" 
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/home')}
                     style={{ cursor: 'pointer', width: '24px', height: '24px' }}
                 />
                 <Logo 

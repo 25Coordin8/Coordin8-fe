@@ -3,10 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Projects } from '../utils/projects';
 import { Storage } from '../utils/storage';
 import { FocusTimer } from '../utils/timer';
-import { sendFocusSession } from '../utils/api';
+import { createFocusSession, endFocusSession } from '../utils/api';
 import Logo from '../components/Logo';
-import backIcon from '../assets/back.png';
 import focusModeIcon from '../assets/focusmode.png';
+import backIcon from '../assets/back.png';
 
 function FocusMode() {
     const navigate = useNavigate();
@@ -17,7 +17,7 @@ function FocusMode() {
     const [isRunning, setIsRunning] = useState(false);
     const timerRef = useRef(null);
     const sessionStartTimeRef = useRef(null); // 세션 시작 시간 추적
-    const lastSavedSecondsRef = useRef(0); // 마지막으로 저장한 초 단위 시간
+    const currentSessionIdRef = useRef(null); // 현재 세션 ID
 
     useEffect(() => {
         const profile = Storage.get('userProfile');
@@ -48,54 +48,53 @@ function FocusMode() {
     }, [projectId, navigate]);
 
     /**
-     * 세션 데이터를 백엔드로 전송하는 함수
-     * @param {number} focusSeconds - 집중한 시간 (초 단위)
+     * 세션 종료 및 백엔드로 전송하는 함수
      */
-    const saveSessionData = async (focusSeconds = null) => {
+    const saveSessionData = async () => {
         const profile = Storage.get('userProfile');
-        if (!profile || !projectId) {
+        const userId = Storage.get('userId');
+        
+        if (!profile || !projectId || !userId) {
+            console.warn('세션 저장 실패: 프로필, 프로젝트 ID 또는 사용자 ID가 없습니다.');
             return;
         }
 
-        // focusSeconds가 제공되지 않으면 타이머에서 계산
-        const seconds = focusSeconds !== null 
-            ? focusSeconds 
-            : Math.floor(timerRef.current.elapsed / 1000);
+        if (!sessionStartTimeRef.current) {
+            console.warn('세션 저장 실패: 시작 시간이 없습니다.');
+            return;
+        }
 
-        // 최소 1초 이상 집중했을 때만 전송 (의미있는 데이터만)
+        // 타이머에서 경과 시간 계산
+        const seconds = Math.floor(timerRef.current.elapsed / 1000);
+        
+        // 최소 1초 이상 집중했을 때만 전송
         if (seconds <= 0) {
             return;
         }
 
-        // 이미 저장한 시간은 제외하고 새로 추가된 시간만 전송
-        const newSeconds = seconds - lastSavedSecondsRef.current;
-        if (newSeconds <= 0) {
-            return;
-        }
+        const startTime = new Date(sessionStartTimeRef.current).toISOString();
+        const endTime = new Date().toISOString();
 
         // 세션 정보 생성
         const sessionData = {
-            userId: profile.id || profile.name || 'me', // 사용자 ID (없으면 이름 사용)
-            projectId: projectId,
-            focusSeconds: newSeconds, // 새로 추가된 시간만 전송
+            projectId: parseInt(projectId) || projectId,
+            userId: parseInt(userId) || userId,
+            sessionType: 'FOCUS',
+            startTime: startTime,
+            endTime: endTime
         };
 
         console.log('세션 정보 전송:', sessionData);
 
-        // 백엔드로 전송
-        const result = await sendFocusSession(sessionData);
+        // 백엔드로 세션 생성
+        const result = await createFocusSession(sessionData);
         
-        if (result.success) {
-            console.log('세션 정보 전송 성공');
-            // 성공적으로 전송된 시간 업데이트
-            lastSavedSecondsRef.current = seconds;
+        if (result.success && result.data) {
+            console.log('✅ 세션 정보 전송 성공:', result.data);
+            currentSessionIdRef.current = result.data.id;
         } else {
-            console.warn('세션 정보 전송 실패:', result.error);
+            console.warn('❌ 세션 정보 전송 실패:', result.error);
         }
-
-        // 로컬 스토리지에도 총 집중 시간 저장 (기존 로직 유지)
-        const currentTime = Storage.get('totalFocusTime') || 0;
-        Storage.set('totalFocusTime', currentTime + newSeconds);
     };
 
     const startTimer = () => {
@@ -104,6 +103,7 @@ function FocusMode() {
             setIsRunning(true);
             // 세션 시작 시간 기록
             sessionStartTimeRef.current = Date.now();
+            currentSessionIdRef.current = null;
         }
     };
 
@@ -112,12 +112,9 @@ function FocusMode() {
             timerRef.current.pause();
             setIsRunning(false);
 
-            // 집중 시간 계산
-            const seconds = Math.floor(timerRef.current.elapsed / 1000);
-            
-            // 세션 정보를 백엔드로 전송 (중간 저장)
-            if (seconds > 0) {
-                await saveSessionData(seconds);
+            // 세션 정보를 백엔드로 전송
+            if (sessionStartTimeRef.current) {
+                await saveSessionData();
             }
         }
     };
@@ -129,7 +126,13 @@ function FocusMode() {
                     src={backIcon} 
                     alt="뒤로가기" 
                     className="back-arrow" 
-                    onClick={() => navigate(-1)}
+                    onClick={async () => {
+                        // 페이지를 떠나기 전에 세션 저장
+                        if (sessionStartTimeRef.current && timerRef.current) {
+                            await saveSessionData();
+                        }
+                        navigate('/home');
+                    }}
                     style={{ cursor: 'pointer', width: '24px', height: '24px' }}
                 />
                 <Logo 
