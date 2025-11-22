@@ -5,17 +5,30 @@ import { Storage } from '../utils/storage';
 import { calculateDDay } from '../utils/helpers';
 import { deleteProject as deleteProjectAPI } from '../utils/api';
 import Logo from '../components/Logo';
+import cr01 from '../assets/cr01.png';
+import cr02 from '../assets/cr02.png';
+import cr03 from '../assets/cr03.png';
+import cr04 from '../assets/cr04.png';
+import cr05 from '../assets/cr05.png';
+import cr06 from '../assets/cr06.png';
+import cr07 from '../assets/cr07.png';
+import cr08 from '../assets/cr08.png';
 
 function Home() {
     const navigate = useNavigate();
     const [projects, setProjects] = useState([]);
+    const [profile, setProfile] = useState(null);
+    
+    // 캐릭터 이미지 배열
+    const characterImages = [cr01, cr02, cr03, cr04, cr05, cr06, cr07, cr08];
 
     useEffect(() => {
-        const profile = Storage.get('userProfile');
-        if (!profile) {
+        const userProfile = Storage.get('userProfile');
+        if (!userProfile) {
             navigate('/');
             return;
         }
+        setProfile(userProfile);
         loadProjects();
     }, [navigate]);
 
@@ -118,7 +131,34 @@ function Home() {
                 <Logo 
                     style={{ height: '19px', width: 'auto', objectFit: 'contain' }}
                 />
-                <div className="user-icon" onClick={() => navigate('/mypage')}></div>
+                <div 
+                    className="user-icon" 
+                    onClick={() => navigate('/mypage')}
+                    style={{
+                        overflow: 'hidden',
+                        backgroundImage: profile && (profile.characterImage 
+                            ? `url(${profile.characterImage})` 
+                            : profile.character 
+                                ? `url(${characterImages[profile.character - 1] || characterImages[0]})`
+                                : 'none'),
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundColor: profile && (profile.characterImage || profile.character) ? 'transparent' : '#E26D59'
+                    }}
+                >
+                    {profile && (profile.characterImage || profile.character) && (
+                        <img 
+                            src={profile.characterImage || characterImages[profile.character - 1] || characterImages[0]} 
+                            alt="프로필" 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover',
+                                display: 'block'
+                            }} 
+                        />
+                    )}
+                </div>
             </div>
             <div className="content">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

@@ -137,6 +137,9 @@ export async function createOrUpdateUser(userData) {
             ? `${API_BASE_URL}/users/${userData.id}`
             : `${API_BASE_URL}/users`;
 
+        console.log('사용자 생성/업데이트 API 호출:', method, url);
+        console.log('전송 데이터:', userData);
+
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -145,14 +148,24 @@ export async function createOrUpdateUser(userData) {
             body: JSON.stringify(userData),
         });
 
+        console.log('사용자 API 응답 상태:', response.status, response.statusText);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('사용자 API 에러 응답:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('사용자 API 응답 데이터:', data);
         return { success: true, data };
     } catch (error) {
         console.error('사용자 생성/업데이트 실패:', error);
+        console.error('에러 상세:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         return { success: false, error: error.message };
     }
 }

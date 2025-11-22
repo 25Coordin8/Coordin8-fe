@@ -40,12 +40,14 @@ function CreateTeam() {
             const projectResult = await createProject(projectData);
             if (projectResult.success && projectResult.data) {
                 backendProjectId = projectResult.data.id;
-                console.log('프로젝트가 백엔드에 생성되었습니다:', projectResult.data);
+                console.log('✅ 프로젝트가 백엔드에 생성되었습니다:', projectResult.data);
             } else {
-                console.error('프로젝트 생성 실패:', projectResult.error);
+                console.error('❌ 프로젝트 생성 실패:', projectResult.error);
+                alert(`프로젝트 생성에 실패했습니다: ${projectResult.error}\n\n브라우저 콘솔을 확인해주세요.`);
             }
         } catch (error) {
-            console.error('프로젝트 생성 중 오류:', error);
+            console.error('❌ 프로젝트 생성 중 오류:', error);
+            alert(`프로젝트 생성 중 오류가 발생했습니다: ${error.message}\n\n브라우저 콘솔을 확인해주세요.`);
         }
 
         // 로컬 스토리지에 프로젝트 추가
@@ -75,15 +77,18 @@ function CreateTeam() {
                 
                 const memberResult = await createProjectMember(memberData);
                 if (memberResult.success) {
-                    console.log('프로젝트 멤버가 백엔드에 생성되었습니다:', memberResult.data);
+                    console.log('✅ 프로젝트 멤버가 백엔드에 생성되었습니다:', memberResult.data);
                 } else {
-                    console.error('프로젝트 멤버 생성 실패:', memberResult.error);
+                    console.error('❌ 프로젝트 멤버 생성 실패:', memberResult.error);
+                    alert(`프로젝트 멤버 생성에 실패했습니다: ${memberResult.error}`);
                 }
             } catch (error) {
-                console.error('프로젝트 멤버 생성 중 오류:', error);
+                console.error('❌ 프로젝트 멤버 생성 중 오류:', error);
+                alert(`프로젝트 멤버 생성 중 오류가 발생했습니다: ${error.message}`);
             }
         } else {
-            console.warn('userId 또는 projectId가 없어 백엔드에 프로젝트 멤버를 생성할 수 없습니다.');
+            console.warn('⚠️ userId 또는 projectId가 없어 백엔드에 프로젝트 멤버를 생성할 수 없습니다.');
+            console.warn('userId:', userId, 'backendProjectId:', backendProjectId);
         }
 
         alert('팀이 생성되었습니다!');

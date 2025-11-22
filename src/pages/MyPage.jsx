@@ -183,7 +183,6 @@ function MyPage() {
                 <Logo 
                     style={{ height: '19px', width: 'auto', objectFit: 'contain' }}
                 />
-                <div className="user-icon"></div>
             </div>
             <div className="content">
                 <div className="profile-section">

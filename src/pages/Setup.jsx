@@ -61,11 +61,13 @@ function Setup() {
             // 백엔드에서 받은 사용자 ID 저장
             if (result.data && result.data.id) {
                 Storage.set('userId', result.data.id);
+                console.log('✅ 사용자 정보가 백엔드에 저장되었습니다. ID:', result.data.id);
             } else if (existingUserId) {
                 Storage.set('userId', existingUserId);
             }
         } else {
-            console.error('사용자 정보 저장 실패:', result.error);
+            console.error('❌ 사용자 정보 저장 실패:', result.error);
+            alert(`사용자 정보 저장에 실패했습니다: ${result.error}\n\n브라우저 콘솔을 확인해주세요.`);
         }
 
         // 로컬 스토리지에도 프로필 저장 (기존 호환성 유지)
